@@ -7,6 +7,7 @@ import type { TaskFormData, TaskStatus, PriorityLevel } from '../types';
 
 interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void;
+  onCancel: () => void;
   initialData?: TaskFormData;
   isSubmitting?: boolean;
 }
@@ -14,7 +15,8 @@ interface TaskFormProps {
 const TaskForm: React.FC<TaskFormProps> = ({
   onSubmit,
   initialData,
-  isSubmitting
+  isSubmitting,
+  onCancel
 }) => {
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
@@ -63,9 +65,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
   ];
 
   const priorityOptions = [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' }
+    { value: 'blocker', label: '🛑 Blocker' },
+    { value: 'major', label: '⚠️ Major' },
+    { value: 'high', label: '❗ High' },
+    { value: 'medium', label: '• Medium' },
+    { value: 'low', label: '↓ Low' }
   ];
 
   return (
@@ -131,6 +135,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
       </div>
 
       <div className="flex justify-end space-x-2">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
         <Button
           type="submit"
           isLoading={isSubmitting}

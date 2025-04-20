@@ -13,7 +13,8 @@ import {
   updateTask,
   deleteTask,
   searchTasks,
-  updateTaskStatus
+  updateTaskStatus,
+  fetchStatusHistory
 } from '../services/taskService';
 import {
   fetchProjects,
@@ -190,11 +191,12 @@ const TasksPage: React.FC = () => {
   const handleStatusChange = async (
     taskId: string,
     statusType: StatusType,
-    newStatus: TaskStatus
+    newStatus: TaskStatus,
+    remarks: string
   ) => {
     try {
       setError(null);
-      const updatedTask = await updateTaskStatus(taskId, statusType, newStatus);
+      const updatedTask = await updateTaskStatus(taskId, statusType, newStatus, remarks);
       setTasks((prev) =>
         prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
       );
@@ -239,7 +241,13 @@ const TasksPage: React.FC = () => {
         break;
       case 'priority':
         sortedTasks.sort((a, b) => {
-          const priorityValues = { high: 3, medium: 2, low: 1 };
+          const priorityValues = {
+            blocker: 5,
+            major: 4,
+            high: 3,
+            medium: 2,
+            low: 1
+          };
           return priorityValues[b.priority] - priorityValues[a.priority];
         });
         break;
@@ -282,6 +290,16 @@ const TasksPage: React.FC = () => {
     }
 
     setFilteredTasks(result);
+  };
+
+  const handleFetchStatusHistory = async (taskId: string) => {
+    try {
+      return await fetchStatusHistory(taskId);
+    } catch (err) {
+      setError('Failed to fetch status history.');
+      console.error(err);
+      return [];
+    }
   };
 
   return (
@@ -351,8 +369,7 @@ const TasksPage: React.FC = () => {
                 disabled={!selectedProjectId}
                 className={!selectedProjectId ? 'opacity-50 cursor-not-allowed' : ''}
               >
-                <Plus size={18} className="mr-1" />
-                Add Task
+                <Plus size={18} />
               </Button>
             </div>
 
@@ -395,6 +412,7 @@ const TasksPage: React.FC = () => {
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
               onStatusChange={handleStatusChange}
+              onFetchStatusHistory={handleFetchStatusHistory}
             />
           </div>
         </div>

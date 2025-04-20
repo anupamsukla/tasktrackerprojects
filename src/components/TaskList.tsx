@@ -1,19 +1,21 @@
 import React from 'react';
-import { Task } from '../types';
+import { Task, StatusType, TaskStatus, StatusChange } from '../types';
 import TaskTable from './TaskTable';
 
 interface TaskListProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
-  onStatusChange: (id: string, status: Task['status']) => void;
+  onStatusChange: (id: string, statusType: StatusType, newStatus: TaskStatus, remarks: string) => void;
+  onFetchStatusHistory: (taskId: string) => Promise<StatusChange[]>;
 }
 
 const TaskList: React.FC<TaskListProps> = ({
   tasks,
   onEdit,
   onDelete,
-  onStatusChange
+  onStatusChange,
+  onFetchStatusHistory
 }) => {
   return (
     <div>
@@ -27,6 +29,7 @@ const TaskList: React.FC<TaskListProps> = ({
           onEdit={onEdit}
           onDelete={onDelete}
           onStatusChange={onStatusChange}
+          onFetchStatusHistory={onFetchStatusHistory}
         />
       )}
     </div>

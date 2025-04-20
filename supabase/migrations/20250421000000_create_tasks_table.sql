@@ -5,7 +5,7 @@ DROP TYPE IF EXISTS priority_level CASCADE;
 
 -- Create custom types
 CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'completed');
-CREATE TYPE priority_level AS ENUM ('low', 'medium', 'high');
+CREATE TYPE priority_level AS ENUM ('blocker', 'major', 'high', 'medium', 'low');
 
 -- Create tasks table
 CREATE TABLE tasks (

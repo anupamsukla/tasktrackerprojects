@@ -49,3 +49,13 @@ export interface TaskFormProps {
   initialData?: TaskFormData;
   isSubmitting: boolean;
 }
+
+export interface StatusChange {
+  id: string;
+  task_id: string;
+  status_type: StatusType;
+  statuses: TaskStatus[];
+  remarks: string;
+  changed_at: string;
+  changed_by: string;
+}

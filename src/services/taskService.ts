@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Task, TaskFormData, TaskStatus, StatusType } from '../types';
+import type { Task, TaskFormData, TaskStatus, StatusType, StatusChange } from '../types';
 
 export const fetchTasks = async (userId: string): Promise<Task[]> => {
   const { data, error } = await supabase
@@ -56,21 +56,38 @@ export const updateTask = async (id: string, task: Partial<TaskFormData>): Promi
 export const updateTaskStatus = async (
   taskId: string,
   statusType: StatusType,
-  newStatus: TaskStatus
+  newStatus: TaskStatus,
+  remarks: string
 ): Promise<Task> => {
-  const { data, error } = await supabase
+  const { data: task, error: taskError } = await supabase
     .from('tasks')
-    .update({ [`${statusType}_status`]: newStatus })
+    .select(`*, ${statusType}_status`)
     .eq('id', taskId)
-    .select()
     .single();
 
-  if (error) {
-    console.error('Error updating task status:', error);
-    throw new Error(error.message);
+  if (taskError) {
+    console.error('Error fetching task:', taskError);
+    throw new Error(taskError.message);
   }
 
-  return data as Task;
+  const oldStatus = task[`${statusType}_status`];
+
+  // Start a transaction to update both tables
+  const { data: updatedTask, error: updateError } = await supabase
+    .rpc('update_task_status', {
+      p_task_id: taskId,
+      p_status_type: statusType,
+      p_new_status: newStatus,
+      p_remarks: remarks,
+      p_old_status: oldStatus
+    });
+
+  if (updateError) {
+    console.error('Error updating task status:', updateError);
+    throw new Error(updateError.message);
+  }
+
+  return updatedTask as Task;
 };
 
 export const deleteTask = async (id: string): Promise<void> => {
@@ -99,4 +116,15 @@ export const searchTasks = async (query: string, userId: string): Promise<Task[]
   }
 
   return data as Task[];
+};
+
+export const fetchStatusHistory = async (taskId: string): Promise<StatusChange[]> => {
+  const { data, error } = await supabase
+    .from('status_changes')
+    .select('*')
+    .eq('task_id', taskId)
+    .order('changed_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
 };
