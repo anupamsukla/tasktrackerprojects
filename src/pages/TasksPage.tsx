@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, LogOut } from 'lucide-react';
-import { Task, TaskFormData, FilterOption, SortOption, Project, ProjectFormData } from '../types';
+import type { Task, TaskFormData, FilterOption, SortOption, Project } from '../types';
 import TaskList from '../components/TaskList';
 import TaskForm from '../components/TaskForm';
 import ProjectSelector from '../components/ProjectSelector';
 import ProjectForm from '../components/ProjectForm';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { 
-  fetchTasks, 
-  createTask, 
-  updateTask, 
-  deleteTask, 
-  searchTasks 
+import {
+  fetchTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  searchTasks,
+  updateTaskStatus
 } from '../services/taskService';
 import {
   fetchProjects,
@@ -77,7 +78,7 @@ const TasksPage: React.FC = () => {
       if (!user) return;
       setIsSubmitting(true);
       setError(null);
-      
+
       const newProject = await createProject(data, user.id);
       setProjects((prev) => [newProject, ...prev]);
       setIsProjectFormOpen(false);
@@ -94,7 +95,7 @@ const TasksPage: React.FC = () => {
       if (!selectedProject) return;
       setIsSubmitting(true);
       setError(null);
-      
+
       const updatedProject = await updateProject(selectedProject.id, data);
       setProjects((prev) =>
         prev.map((project) => (project.id === updatedProject.id ? updatedProject : project))
@@ -126,23 +127,27 @@ const TasksPage: React.FC = () => {
   const handleCreateTask = async (data: TaskFormData) => {
     try {
       if (!user) return;
+      if (!selectedProjectId) {
+        setError('Please select a project first');
+        return;
+      }
+
       setIsSubmitting(true);
       setError(null);
-      
-      const taskData = {
+
+      const newTask = await createTask({
         ...data,
         project_id: selectedProjectId
-      };
-      
-      const newTask = await createTask(taskData, user.id);
+      }, user.id);
+
       setTasks((prev) => [newTask, ...prev]);
-      applyFiltersAndSearch([newTask, ...tasks]);
+      setFilteredTasks((prev) => [newTask, ...prev]);
+      setIsSubmitting(false);
       setIsTaskFormOpen(false);
     } catch (err) {
       setError('Failed to create task.');
-      console.error(err);
-    } finally {
       setIsSubmitting(false);
+      console.error(err);
     }
   };
 
@@ -151,7 +156,7 @@ const TasksPage: React.FC = () => {
       if (!selectedTask) return;
       setIsSubmitting(true);
       setError(null);
-      
+
       const updatedTask = await updateTask(selectedTask.id, data);
       setTasks((prev) =>
         prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
@@ -182,10 +187,14 @@ const TasksPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: string, status: Task['status']) => {
+  const handleStatusChange = async (
+    taskId: string,
+    statusType: StatusType,
+    newStatus: TaskStatus
+  ) => {
     try {
       setError(null);
-      const updatedTask = await updateTask(id, { status });
+      const updatedTask = await updateTaskStatus(taskId, statusType, newStatus);
       setTasks((prev) =>
         prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
       );
@@ -220,7 +229,7 @@ const TasksPage: React.FC = () => {
 
   const handleSort = (sortBy: SortOption) => {
     let sortedTasks = [...filteredTasks];
-    
+
     switch (sortBy) {
       case 'newest':
         sortedTasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -243,35 +252,35 @@ const TasksPage: React.FC = () => {
         });
         break;
     }
-    
+
     setFilteredTasks(sortedTasks);
   };
 
   const applyFiltersAndSearch = (
-    taskList: Task[], 
-    filter = currentFilter, 
+    taskList: Task[],
+    filter = currentFilter,
     query = searchQuery
   ) => {
     let result = [...taskList];
-    
+
     // Filter by project
     if (selectedProjectId) {
       result = result.filter((task) => task.project_id === selectedProjectId);
     }
-    
+
     // Apply status filter
     if (filter !== 'all') {
       result = result.filter((task) => task.status === filter);
     }
-    
+
     // Apply search query
     if (query) {
-      result = result.filter((task) => 
+      result = result.filter((task) =>
         task.title.toLowerCase().includes(query.toLowerCase()) ||
         (task.description?.toLowerCase().includes(query.toLowerCase()) || false)
       );
     }
-    
+
     setFilteredTasks(result);
   };
 
@@ -280,14 +289,14 @@ const TasksPage: React.FC = () => {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Task Tracker</h1>
-          
+
           <div className="flex items-center">
             {user && (
               <div className="flex items-center mr-4">
                 <span className="text-sm text-gray-600 mr-2">{user.email}</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={signOut}
                   className="text-gray-600"
                 >
@@ -299,14 +308,14 @@ const TasksPage: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
             {error}
           </div>
         )}
-        
+
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 md:col-span-3">
             <ProjectSelector
@@ -321,26 +330,32 @@ const TasksPage: React.FC = () => {
               onDeleteProject={handleDeleteProject}
             />
           </div>
-          
+
           <div className="col-span-12 md:col-span-9">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-800">
-                {selectedProjectId 
+                {selectedProjectId
                   ? `Tasks - ${projects.find(p => p.id === selectedProjectId)?.name}`
                   : 'All Tasks'
                 }
               </h2>
-              <Button 
+              <Button
                 onClick={() => {
+                  if (!selectedProjectId) {
+                    setError('Please select a project first');
+                    return;
+                  }
                   setSelectedTask(undefined);
                   setIsTaskFormOpen(true);
                 }}
+                disabled={!selectedProjectId}
+                className={!selectedProjectId ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 <Plus size={18} className="mr-1" />
                 Add Task
               </Button>
             </div>
-            
+
             {isProjectFormOpen && (
               <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-medium mb-4">
@@ -357,7 +372,7 @@ const TasksPage: React.FC = () => {
                 />
               </div>
             )}
-            
+
             {isTaskFormOpen && (
               <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-medium mb-4">
@@ -374,15 +389,12 @@ const TasksPage: React.FC = () => {
                 />
               </div>
             )}
-            
-            <TaskList 
+
+            <TaskList
               tasks={filteredTasks}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
               onStatusChange={handleStatusChange}
-              onSearch={handleSearch}
-              onFilter={handleFilter}
-              onSort={handleSort}
             />
           </div>
         </div>

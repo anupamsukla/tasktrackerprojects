@@ -1,11 +1,3 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
 export interface Database {
   public: {
     Tables: {
@@ -13,46 +5,46 @@ export interface Database {
         Row: {
           id: string
           created_at: string
+          updated_at: string
           title: string
           description: string | null
-          status: string
-          priority: string
+          dev_status: 'todo' | 'in-progress' | 'completed'
+          qa_status: 'todo' | 'in-progress' | 'completed'
+          final_status: 'todo' | 'in-progress' | 'completed'
+          priority: 'low' | 'medium' | 'high'
           due_date: string | null
           user_id: string
+          project_id: string
         }
         Insert: {
           id?: string
           created_at?: string
+          updated_at?: string
           title: string
           description?: string | null
-          status: string
-          priority: string
+          dev_status?: 'todo' | 'in-progress' | 'completed'
+          qa_status?: 'todo' | 'in-progress' | 'completed'
+          final_status?: 'todo' | 'in-progress' | 'completed'
+          priority: 'low' | 'medium' | 'high'
           due_date?: string | null
           user_id: string
+          project_id: string
         }
         Update: {
           id?: string
           created_at?: string
+          updated_at?: string
           title?: string
           description?: string | null
-          status?: string
-          priority?: string
+          dev_status?: 'todo' | 'in-progress' | 'completed'
+          qa_status?: 'todo' | 'in-progress' | 'completed'
+          final_status?: 'todo' | 'in-progress' | 'completed'
+          priority?: 'low' | 'medium' | 'high'
           due_date?: string | null
           user_id?: string
+          project_id?: string
         }
       }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
     }
   }
 }

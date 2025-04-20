@@ -1,21 +1,21 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Pencil, Trash2, CheckCircle } from 'lucide-react';
-import { Task } from '../types';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Task, TaskStatus } from '../types';
 import Button from './ui/Button';
 
 interface TaskTableProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
-  onStatusChange: (id: string, status: Task['status']) => void;
+  onStatusChange: (taskId: string, statusType: StatusType, newStatus: TaskStatus) => void;
 }
 
 const TaskTable: React.FC<TaskTableProps> = ({
   tasks,
   onEdit,
   onDelete,
-  onStatusChange,
+  onStatusChange
 }) => {
   const priorityColors = {
     low: 'bg-blue-100 text-blue-800',
@@ -29,59 +29,74 @@ const TaskTable: React.FC<TaskTableProps> = ({
     'completed': 'bg-green-100 text-green-800'
   };
 
-  const getNextStatus = (currentStatus: Task['status']): Task['status'] => {
-    switch (currentStatus) {
-      case 'todo':
-        return 'in-progress';
-      case 'in-progress':
-        return 'completed';
-      default:
-        return 'todo';
+  const getNextStatus = (current: TaskStatus): TaskStatus => {
+    switch (current) {
+      case 'todo': return 'in-progress';
+      case 'in-progress': return 'completed';
+      default: return 'todo';
     }
   };
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow">
+    <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Title
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Description
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Dev Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              QA Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Final Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Priority
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Due Date
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {tasks.map((task) => (
-            <tr key={task.id} className={task.status === 'completed' ? 'bg-gray-50' : ''}>
+            <tr key={task.id}>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center">
-                  <div className="text-sm font-medium text-gray-900">
-                    {task.title}
-                  </div>
-                </div>
-                {task.description && (
-                  <div className="text-sm text-gray-500 truncate max-w-xs">
-                    {task.description}
-                  </div>
-                )}
+                <div className="text-sm font-medium text-gray-900">{task.title}</div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[task.status]}`}>
-                  {task.status.replace('-', ' ')}
-                </span>
+              <td className="px-6 py-4">
+                <div className="text-sm text-gray-500">{task.description || '-'}</div>
               </td>
+              {(['dev', 'qa', 'final'] as const).map((type) => (
+                <td key={type} className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex flex-col items-start space-y-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${statusColors[task[`${type}_status`]]
+                      }`}>
+                      {task[`${type}_status`].replace('-', ' ')}
+                    </span>
+                    <button
+                      onClick={() => onStatusChange(
+                        task.id,
+                        type,
+                        getNextStatus(task[`${type}_status`])
+                      )}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Update
+                    </button>
+                  </div>
+                </td>
+              ))}
               <td className="px-6 py-4 whitespace-nowrap">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityColors[task.priority]}`}>
                   {task.priority}
@@ -92,14 +107,6 @@ const TaskTable: React.FC<TaskTableProps> = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onStatusChange(task.id, getNextStatus(task.status))}
-                    className="text-gray-700"
-                  >
-                    <CheckCircle size={16} />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

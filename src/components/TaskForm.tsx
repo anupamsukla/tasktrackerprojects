@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Task, TaskFormData } from '../types';
-import Button from './ui/Button';
 import Input from './ui/Input';
 import TextArea from './ui/TextArea';
 import Select from './ui/Select';
+import Button from './ui/Button';
+import type { TaskFormData, TaskStatus, PriorityLevel } from '../types';
 
 interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void;
-  onCancel: () => void;
-  initialData?: Task;
-  isSubmitting: boolean;
+  initialData?: TaskFormData;
+  isSubmitting?: boolean;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
   onSubmit,
-  onCancel,
   initialData,
   isSubmitting
 }) => {
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
     description: '',
-    status: 'todo',
+    dev_status: 'todo',
+    qa_status: 'todo',
+    final_status: 'todo',
     priority: 'medium',
-    due_date: undefined
+    due_date: null
   });
 
   useEffect(() => {
@@ -31,7 +31,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
       setFormData({
         title: initialData.title,
         description: initialData.description || '',
-        status: initialData.status,
+        dev_status: initialData.dev_status || 'todo',
+        qa_status: initialData.qa_status || 'todo',
+        final_status: initialData.final_status || 'todo',
         priority: initialData.priority,
         due_date: initialData.due_date
       });
@@ -54,51 +56,71 @@ const TaskForm: React.FC<TaskFormProps> = ({
     onSubmit(formData);
   };
 
+  const statusOptions = [
+    { value: 'todo', label: 'To Do' },
+    { value: 'in-progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' }
+  ];
+
+  const priorityOptions = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' }
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
-        label="Task Title"
+        label="Title"
         name="title"
         value={formData.title}
         onChange={handleChange}
-        placeholder="Enter task title"
         required
       />
-      
+
       <TextArea
         label="Description"
         name="description"
-        value={formData.description}
+        value={formData.description || ''}
         onChange={handleChange}
-        placeholder="Enter task description (optional)"
         rows={3}
       />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Select
+          label="Dev Status"
+          name="dev_status"
+          value={formData.dev_status || 'todo'}
+          onChange={(value) => handleSelectChange('dev_status', value)}
+          options={statusOptions}
+        />
+
+        <Select
+          label="QA Status"
+          name="qa_status"
+          value={formData.qa_status || 'todo'}
+          onChange={(value) => handleSelectChange('qa_status', value)}
+          options={statusOptions}
+        />
+
+        <Select
+          label="Final Status"
+          name="final_status"
+          value={formData.final_status || 'todo'}
+          onChange={(value) => handleSelectChange('final_status', value)}
+          options={statusOptions}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
           label="Priority"
           name="priority"
           value={formData.priority}
-          onChange={(value) => handleSelectChange('priority', value)}
-          options={[
-            { value: 'low', label: 'Low' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'high', label: 'High' }
-          ]}
+          onChange={(value) => handleSelectChange('priority', value as PriorityLevel)}
+          options={priorityOptions}
         />
-        
-        <Select
-          label="Status"
-          name="status"
-          value={formData.status}
-          onChange={(value) => handleSelectChange('status', value)}
-          options={[
-            { value: 'todo', label: 'To Do' },
-            { value: 'in-progress', label: 'In Progress' },
-            { value: 'completed', label: 'Completed' }
-          ]}
-        />
-        
+
         <Input
           label="Due Date"
           name="due_date"
@@ -107,16 +129,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
           onChange={handleChange}
         />
       </div>
-      
-      <div className="flex justify-end space-x-3 pt-2">
-        <Button 
-          type="button" 
-          variant="secondary"
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
-        <Button 
+
+      <div className="flex justify-end space-x-2">
+        <Button
           type="submit"
           isLoading={isSubmitting}
         >

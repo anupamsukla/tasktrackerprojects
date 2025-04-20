@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Task, TaskFormData } from '../types';
+import type { Task, TaskFormData, TaskStatus, StatusType } from '../types';
 
 export const fetchTasks = async (userId: string): Promise<Task[]> => {
   const { data, error } = await supabase
@@ -19,7 +19,13 @@ export const fetchTasks = async (userId: string): Promise<Task[]> => {
 export const createTask = async (task: TaskFormData, userId: string): Promise<Task> => {
   const { data, error } = await supabase
     .from('tasks')
-    .insert([{ ...task, user_id: userId }])
+    .insert([{
+      ...task,
+      user_id: userId,
+      dev_status: task.dev_status || 'todo',
+      qa_status: task.qa_status || 'todo',
+      final_status: task.final_status || 'todo'
+    }])
     .select()
     .single();
 
@@ -47,6 +53,26 @@ export const updateTask = async (id: string, task: Partial<TaskFormData>): Promi
   return data as Task;
 };
 
+export const updateTaskStatus = async (
+  taskId: string,
+  statusType: StatusType,
+  newStatus: TaskStatus
+): Promise<Task> => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ [`${statusType}_status`]: newStatus })
+    .eq('id', taskId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating task status:', error);
+    throw new Error(error.message);
+  }
+
+  return data as Task;
+};
+
 export const deleteTask = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('tasks')
@@ -59,22 +85,13 @@ export const deleteTask = async (id: string): Promise<void> => {
   }
 };
 
-export const searchTasks = async (
-  userId: string,
-  query: string,
-  status?: string
-): Promise<Task[]> => {
-  let queryBuilder = supabase
+export const searchTasks = async (query: string, userId: string): Promise<Task[]> => {
+  const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('user_id', userId)
-    .ilike('title', `%${query}%`);
-
-  if (status && status !== 'all') {
-    queryBuilder = queryBuilder.eq('status', status);
-  }
-
-  const { data, error } = await queryBuilder.order('created_at', { ascending: false });
+    .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error searching tasks:', error);
